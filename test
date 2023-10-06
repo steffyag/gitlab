@@ -1,29 +1,30 @@
 pipeline {
-	agent { label 'mvnbuildserver1' }
-
-    tools {
-        maven "maven"
+    agent {
+        docker {
+            image 'maven:3.9.0'
+            args '-v /root/.m2:/root/.m2'
+        }
     }
-
-	stages {
-		stage('SCM Checkout') {
-			steps {
-				echo 'SCM CHECKOUT'
-				git 'https://github.com/LoksaiETA/Java-mvn-app2.git'
-
-			}
-		}
-		stage('Java App Build') {
-			steps {
-				echo 'Perform Maven Build'
-				sh 'mvn -Dmaven.test.failure.ignore=true clean package'
-			}
-		}
-		stage('Deploy to QA Server') {
-			steps {
-				echo 'Deploy to QA'
-				echo 'Hello Everyone'
-			}
-		}
-	}
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn -B -DskipTests clean package'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+        stage('Deliver') {
+            steps {
+                sh './jenkins/scripts/deliver.sh'
+            }
+        }
+    }
 }
